@@ -190,7 +190,9 @@ class RobstrideBus:
 
         return value
 
-    def write(self, motor: str, parameter_type: tuple[int, np.dtype, str], value: Value) -> None:
+    def write(
+        self, motor: str, parameter_type: tuple[int, np.dtype, str], value: Value
+    ) -> tuple[float, float, float, float]:
         """Write a value to a single motor's parameter.
         """
         device_id = self.motors[motor].id
@@ -217,7 +219,7 @@ class RobstrideBus:
         data = struct.pack("<HH", param_id, 0x00) + value_buffer
 
         self.transmit(CommunicationType.WRITE_PARAMETER, self.host_id, device_id, data)
-        self.receive_status_frame(motor)
+        return self.receive_status_frame(motor)
 
     # RobstrideMethods
 
