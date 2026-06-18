@@ -47,6 +47,28 @@ pip install -r requirements.txt
 python3 src/position_control.py 11
 ```
 
+### RobStride 官方 USB-CAN 适配器
+
+官方 CH340/GD32 USB-CAN 适配器在 Linux 下显示为串口设备（通常为
+`/dev/ttyUSB0`），使用 921600 波特率的 RobStride AT 帧协议。
+
+```bash
+# 仅检测 ID 1 和 2，不使能电机
+python3 src/dual_relative_move.py --probe-only
+
+# ID 1 相对移动 20 度，ID 2 相对移动 100 度
+python3 src/dual_relative_move.py \
+  --execute \
+  --motor-1-id 1 --motor-1-deg 20 \
+  --motor-2-id 2 --motor-2-deg 100 \
+  --speed-deg-s 20 \
+  --kp 15 --kd 0.3 \
+  --torque-limit-nm 2
+```
+
+该命令会先验证两个电机 ID，从当前编码器位置平滑移动，并在完成或中断时
+禁用两个电机的力矩。
+
 ### 速度控制
 
 ```bash

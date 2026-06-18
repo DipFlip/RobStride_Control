@@ -24,6 +24,7 @@ from .table import (
     MODEL_MIT_KD_TABLE,
 )
 from .protocol import CommunicationType
+from .robstride_serial import RobstrideSerialBus
 
 
 Value: TypeAlias = int | float
@@ -45,11 +46,15 @@ class RobstrideBus:
         motors: dict[str, Motor],
         calibration: dict[str, dict] | None = None,
         bitrate: int = 1000000,
+        interface: str = "socketcan",
+        interface_kwargs: dict | None = None,
     ):
         self.channel = channel
         self.motors = motors
         self.calibration = calibration
         self.bitrate = bitrate
+        self.interface = interface
+        self.interface_kwargs = interface_kwargs or {}
 
         if self.calibration:
             print(f"Using calibration: {self.calibration}")
@@ -70,6 +75,7 @@ class RobstrideBus:
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(\n"
+            f"    Interface: '{self.interface}',\n"
             f"    Channel: '{self.channel}',\n"
             f"    Motors: \n{self.motors},\n"
             ")',\n"
@@ -101,11 +107,19 @@ class RobstrideBus:
                 f"Do not call `{self.__class__.__name__}.connect()` twice."
             )
 
-        self.channel_handler = can.interface.Bus(
-            interface="socketcan",
-            channel=self.channel,
-            bitrate=self.bitrate,
-        )
+        if self.interface == "robstride_serial":
+            self.channel_handler = RobstrideSerialBus(
+                channel=self.channel,
+                bitrate=self.bitrate,
+                **self.interface_kwargs,
+            )
+        else:
+            self.channel_handler = can.interface.Bus(
+                interface=self.interface,
+                channel=self.channel,
+                bitrate=self.bitrate,
+                **self.interface_kwargs,
+            )
         print(f"{self.__class__.__name__} connected.")
 
     def disconnect(self, disable_torque: bool = True) -> None:
@@ -398,7 +412,7 @@ class RobstrideBus:
         """
         device_id = self.motors[motor].id
         self.transmit(CommunicationType.ENABLE, self.host_id, device_id)
-        self.receive_status_frame(motor)
+        return self.receive_status_frame(motor)
 
     def disable(self, motor: str):
         """
@@ -406,7 +420,7 @@ class RobstrideBus:
         """
         device_id = self.motors[motor].id
         self.transmit(CommunicationType.DISABLE, self.host_id, device_id)
-        self.receive_status_frame(motor)
+        return self.receive_status_frame(motor)
 
     def write_id(self, motor: str, new_id: int):
         """
